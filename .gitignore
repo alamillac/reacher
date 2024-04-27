@@ -1,5 +1,7 @@
+__pycache__
 *.pyc
 *.log
 Crawler_Linux
 Reacher_One_Linux
 Reacher_Linux
+checkpoint*.pth
