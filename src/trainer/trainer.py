@@ -19,6 +19,7 @@ class Trainer:
         save_every=100,
         save_checkpoint_path="checkpoint.pth",
         save_model_path="model.pth",
+        override_checkpoint=False,
     ):
         """Deep Q-Learning.
 
@@ -38,6 +39,7 @@ class Trainer:
         self.save_checkpoint_path = save_checkpoint_path
         self.save_model_path = save_model_path
         self.save_every = save_every
+        self.override_checkpoint = override_checkpoint
 
     def plot_scores(self, scores):
         # plot the scores
@@ -53,15 +55,14 @@ class Trainer:
         max_score = -np.Inf
         min_score = np.Inf
         for i_episode in range(num_episodes):
-            state = env.reset()
+            states = env.reset()
             score = 0
-            step = 0
-            for _ in range(self.max_t):
-                action = agent.act(state)
-                state, reward, done = env.step(action)
-                score += reward
-                print(f"\rStep {step} Action {action} Score: {score}", end=LINE_CLEAR)
-                step += 1
+            for step in range(self.max_t):
+                actions = agent.act(states)
+                states, rewards, dones = env.step(actions)
+                score += np.mean(rewards)
+                print(f"\rStep {step} Score: {score:.2f}", end="")
+                done = np.any(dones)  # if any agent is done, then the episode is done
                 if done:
                     break
 
@@ -78,18 +79,19 @@ class Trainer:
     def _train(self, env, agent, print_step=False):
         init_episode, eps = self.load_checkpoint(self.save_checkpoint_path, agent)
         for i_episode in range(init_episode, self.max_episodes + 1):
-            state = env.reset()
+            states = env.reset()
             score = 0
-            step = 0
-            for _ in range(self.max_t):
-                action = agent.act(state, eps)
-                next_state, reward, done = env.step(action)
-                agent.step(state, action, reward, next_state, done)
-                state = next_state
-                score += reward
+            for step in range(self.max_t):
+                actions = agent.act(states, eps)
+                next_states, rewards, dones = env.step(actions)
+                agent.step(states, actions, rewards, next_states, dones)
+                states = next_states
+                score += np.mean(rewards)
                 if print_step:
-                    print(f"\rStep {step} Action {action} Score: {score}", end="")
-                step += 1
+                    print(
+                        f"\rEpisode {i_episode} Step {step} Score: {score:.2f}", end=""
+                    )
+                done = np.any(dones)  # if any agent is done, then the episode is done
                 if done:
                     break
             eps = max(self.eps_end, self.eps_decay * eps)  # decrease epsilon
@@ -113,7 +115,7 @@ class Trainer:
 
     def load_checkpoint(self, path, agent):
         # Check if the file exists
-        if not os.path.isfile(path):
+        if not os.path.isfile(path) or self.override_checkpoint:
             return 0, self.eps_start
 
         checkpoint = torch.load(path)

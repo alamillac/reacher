@@ -1,6 +1,5 @@
 import random
 
-import numpy as np
 from unityagents import UnityEnvironment
 
 MAX_SEED_RANGE = 100000
@@ -37,10 +36,8 @@ class Env:
     def _get_env_info(self, env_info):
         next_states = self._get_states(env_info)
         rewards = env_info.rewards  # get reward (for each agent)
-        total_reward = np.sum(rewards)
         dones = env_info.local_done
-        done = np.any(dones)
-        return next_states, total_reward, done
+        return next_states, rewards, dones
 
     def _get_states(self, env_info):
         return env_info.vector_observations  # For each agent
@@ -49,8 +46,8 @@ class Env:
         env_info = self.env.reset(train_mode=self.train_mode)[self.brain_name]
         return self._get_states(env_info)
 
-    def step(self, action):
-        env_info = self.env.step(action)[self.brain_name]
+    def step(self, actions):
+        env_info = self.env.step(actions)[self.brain_name]
         return self._get_env_info(env_info)
 
     def close(self):
