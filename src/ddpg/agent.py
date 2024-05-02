@@ -17,6 +17,7 @@ LR_ACTOR = 5e-4  # learning rate of the actor
 LR_CRITIC = 5e-4  # learning rate of the critic
 WEIGHT_DECAY = 0  # L2 weight decay
 UPDATE_EVERY = 4  # how often to update the network
+MIN_BUFFER_SIZE = 1e4  # minimum buffer size before learning
 
 ACTOR_HIDDEN_LAYER_1 = 256
 ACTOR_HIDDEN_LAYER_2 = 128
@@ -36,7 +37,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Agent:
     """Interacts with and learns from the environment."""
 
-    def __init__(self, state_size, action_size, seed):
+    def __init__(self, state_size, action_size, seed=0, batch_size=BATCH_SIZE):
         """Initialize an Agent object.
 
         Params
@@ -89,7 +90,7 @@ class Agent:
         self.noise = OUNoise(action_size, seed)
 
         # Replay memory
-        self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed)
+        self.memory = ReplayBuffer(action_size, BUFFER_SIZE, batch_size, seed)
         self.beta = PER_BETA_START
 
         # Initialize time step (for updating every UPDATE_EVERY steps)
@@ -110,7 +111,7 @@ class Agent:
 
         # Learn every UPDATE_EVERY time steps and if enough samples are available in memory
         self.t_step = (self.t_step + 1) % UPDATE_EVERY
-        if self.t_step == 0 and len(self.memory) > BATCH_SIZE:
+        if self.t_step == 0 and len(self.memory) > MIN_BUFFER_SIZE:
             # Get random subset and learn
             experiences = self.memory.sample()
             actor_loss, critic_loss = self.learn(experiences, GAMMA)
@@ -139,6 +140,9 @@ class Agent:
         self.critic_total_loss = 0
 
     def get_losses(self):
+        if self.num_steps == 0:
+            return [(0, "actor_loss"), (0, "critic_loss")]
+
         return [
             (self.actor_total_loss / self.num_steps, "actor_loss"),
             (self.critic_total_loss / self.num_steps, "critic_loss"),

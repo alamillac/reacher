@@ -12,22 +12,25 @@ env_path = {
         "Reacher_One_Linux/Reacher.x86_64",
         "reacher.pth",
         "reacher_one_checkpoint.pth",
+        64,
     ),
     "reacher_many": (
         "Reacher_Linux/Reacher.x86_64",
         "reacher.pth",
         "reacher_many_checkpoint.pth",
+        128,
     ),
     "crawler": (
         "Crawler_Linux/Crawler.x86_64",
         "crawler.pth",
         "crawler_checkpoint.pth",
+        64,
     ),
 }
 
-#env_name = "reacher_one"
+# env_name = "reacher_one"
 env_name = "reacher_many"
-env_filename, save_path, save_checkpoint_path = env_path[env_name]
+env_filename, save_path, save_checkpoint_path, batch_size = env_path[env_name]
 
 env = Env(env_filename, train_mode=True)
 
@@ -46,12 +49,17 @@ trainer = Trainer(
     max_t=1000,
     save_model_path=save_path,
     save_checkpoint_path=save_checkpoint_path,
-    override_checkpoint=False,
+    override_checkpoint=True,
     writer=writer,
 )
 
-agent = Agent(state_size=env.state_size, action_size=env.action_size, seed=0)
+agent = Agent(
+    state_size=env.state_size,
+    action_size=env.action_size,
+    seed=0,
+    batch_size=batch_size,
+)
 
-# scores = trainer.train_until(env, agent, desired_score=13, consecutive_episodes=100)
-scores = trainer.train(env, agent)
+scores = trainer.train_until(env, agent, desired_score=30, consecutive_episodes=100)
+#scores = trainer.train(env, agent)
 trainer.plot_scores(scores)

@@ -8,8 +8,8 @@ env_path = {
     "crawler": ("Crawler_Linux/Crawler.x86_64", "crawler.pth"),
 }
 
-# env_filename, save_path = env_path["reacher_many"]
-env_filename, save_path = env_path["reacher_one"]
+env_filename, save_path = env_path["reacher_many"]
+# env_filename, save_path = env_path["reacher_one"]
 
 env = Env(env_filename, train_mode=False, seed=0)
 
