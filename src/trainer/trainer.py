@@ -20,6 +20,7 @@ class Trainer:
         save_checkpoint_path="checkpoint.pth",
         save_model_path="model.pth",
         override_checkpoint=False,
+        writer=None,
     ):
         """Deep Q-Learning.
 
@@ -40,6 +41,7 @@ class Trainer:
         self.save_model_path = save_model_path
         self.save_every = save_every
         self.override_checkpoint = override_checkpoint
+        self.writer = writer
 
     def plot_scores(self, scores):
         # plot the scores
@@ -80,9 +82,11 @@ class Trainer:
         init_episode, eps = self.load_checkpoint(self.save_checkpoint_path, agent)
         for i_episode in range(init_episode, self.max_episodes + 1):
             states = env.reset()
+            agent.reset()
             score = 0
             for step in range(self.max_t):
-                actions = agent.act(states, eps)
+                #actions = agent.act(states, eps) # TODO: remove eps from trainer?
+                actions = agent.act(states, True)
                 next_states, rewards, dones = env.step(actions)
                 agent.step(states, actions, rewards, next_states, dones)
                 states = next_states
@@ -94,6 +98,14 @@ class Trainer:
                 done = np.any(dones)  # if any agent is done, then the episode is done
                 if done:
                     break
+
+            if self.writer:
+                self.writer.add_scalar("score", score, i_episode)
+                self.writer.add_scalar("epsilon", eps, i_episode)
+                agent_losses = agent.get_losses()
+                for loss, loss_label in agent_losses:
+                    self.writer.add_scalar(loss_label, loss, i_episode)
+
             eps = max(self.eps_end, self.eps_decay * eps)  # decrease epsilon
 
             # Save the checkpoint
