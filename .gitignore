@@ -5,4 +5,5 @@ runs
 Crawler_Linux
 Reacher_One_Linux
 Reacher_Linux
-checkpoint*.pth
+*checkpoint.pth
+.ipynb_checkpoints

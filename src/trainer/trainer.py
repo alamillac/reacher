@@ -152,7 +152,7 @@ class Trainer:
                 break
 
             print(f"\rEpisode {i_episode} Average Score: {avg_score:.2f}", end="")
-            if i_episode % 100 == 0:
+            if i_episode % 10 == 0:
                 print(f"\rEpisode {i_episode} Average Score: {avg_score:.2f}")
 
         agent.save(self.save_model_path)

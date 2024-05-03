@@ -93,3 +93,17 @@ TODO
 ## Report
 
 The report for this project can be found in the `src/Report.ipynb` file.
+
+To view the report, you need to have Jupyter Notebook installed.
+
+```bash
+jupyter notebook src/Report.ipynb
+```
+
+## Tensorboard
+
+To visualize the training process, you can use Tensorboard.
+
+```bash
+tensorboard --logdir=runs
+```

@@ -45,7 +45,7 @@ log_dir = path.join(
 writer = SummaryWriter(log_dir)
 
 trainer = Trainer(
-    max_episodes=5000,
+    max_episodes=1000,
     max_t=1000,
     save_model_path=save_path,
     save_checkpoint_path=save_checkpoint_path,
