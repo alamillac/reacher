@@ -37,7 +37,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Agent:
     """Interacts with and learns from the environment."""
 
-    def __init__(self, state_size, action_size, seed=0, batch_size=BATCH_SIZE):
+    def __init__(self, state_size, action_size, seed=0, batch_size=BATCH_SIZE, add_noise=True):
         """Initialize an Agent object.
 
         Params
@@ -49,6 +49,7 @@ class Agent:
         self.state_size = state_size
         self.action_size = action_size
         self.seed = random.seed(seed)
+        self.add_noise = add_noise
 
         # Actor Network (w/ Target Network)
         self.actor_local = Actor(
@@ -101,7 +102,7 @@ class Agent:
         self.actor_total_loss = 0
         self.critic_total_loss = 0
 
-    def step(self, states, actions, rewards, next_states, dones):
+    def step(self, states, actions, rewards, next_states, dones, act_info=None):
         """Save experience in replay memory, and use random sample from buffer to learn."""
         # Save experience / reward
         for state, action, reward, next_state, done in zip(
@@ -119,7 +120,7 @@ class Agent:
             self.actor_total_loss += actor_loss
             self.critic_total_loss += critic_loss
 
-    def act(self, states, add_noise=True):
+    def act_train(self, states):
         """Returns actions for given state as per current policy."""
         states = torch.from_numpy(states).float().to(device)
 
@@ -127,9 +128,14 @@ class Agent:
         with torch.no_grad():
             actions = self.actor_local(states).cpu().data.numpy()
         self.actor_local.train()
-        if add_noise:
-            actions += self.noise.sample()  # TODO: Add different noise for each agent?
-        return np.clip(actions, -1, 1)
+        if self.add_noise:
+            actions += self.noise.sample()
+        return np.clip(actions, -1, 1), None
+
+    def act(self, states):
+        """Returns actions for given state as per current policy."""
+        actions, _ = self.act_train(states)
+        return actions
 
     def reset(self):
         self.noise.reset()

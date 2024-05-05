@@ -4,6 +4,7 @@ from collections import deque
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from tqdm import trange
 
 LINE_CLEAR = "\x1b[2K"
 
@@ -13,9 +14,6 @@ class Trainer:
         self,
         max_episodes=2000,
         max_t=1000,
-        eps_start=1.0,
-        eps_end=0.01,
-        eps_decay=0.995,
         save_every=100,
         save_checkpoint_path="checkpoint.pth",
         save_model_path="model.pth",
@@ -28,15 +26,9 @@ class Trainer:
         ======
             max_episodes (int): maximum number of training episodes
             max_t (int): maximum number of timesteps per episode
-            eps_start (float): starting value of epsilon, for epsilon-greedy action selection
-            eps_end (float): minimum value of epsilon
-            eps_decay (float): multiplicative factor (per episode) for decreasing epsilon
         """
         self.max_t = max_t
         self.max_episodes = max_episodes
-        self.eps_start = eps_start
-        self.eps_end = eps_end
-        self.eps_decay = eps_decay
         self.save_checkpoint_path = save_checkpoint_path
         self.save_model_path = save_model_path
         self.save_every = save_every
@@ -56,61 +48,67 @@ class Trainer:
         scores = []
         max_score = -np.Inf
         min_score = np.Inf
-        for i_episode in range(num_episodes):
+        total_score = 0
+        episode_bar = trange(num_episodes)
+        for i_episode in episode_bar:
             states = env.reset()
             score = 0
-            for step in range(self.max_t):
+            steps_bar = trange(self.max_t, leave=False)
+            for step in steps_bar:
                 actions = agent.act(states)
                 states, rewards, dones = env.step(actions)
                 score += np.mean(rewards)
-                print(f"\rStep {step} Score: {score:.2f}", end="")
+                steps_bar.set_description(f"Step {step + 1} Score: {score:.2f}")
                 done = np.any(dones)  # if any agent is done, then the episode is done
                 if done:
                     break
 
+            scores.append(score)
             max_score = max(score, max_score)
             min_score = min(score, min_score)
-            scores.append(score)
-            avg_score = np.mean(scores)
-            print(
-                f"\rEpisode {i_episode + 1} Score: {score:.2f} Min Score: {min_score:.2f} Max Score: {max_score:.2f} Average Score: {avg_score:.2f}"
+            total_score += score
+            avg_score = total_score / (i_episode + 1)
+            episode_bar.set_description(
+                f"Episode {i_episode + 1} Scores: Last {score:.2f} Min {min_score:.2f} Max {max_score:.2f} Avg {avg_score:.2f}"
             )
         env.close()
         return scores
 
-    def _train(self, env, agent, print_step=False):
-        init_episode, eps = self.load_checkpoint(self.save_checkpoint_path, agent)
-        for i_episode in range(init_episode, self.max_episodes + 1):
+    def _train(self, env, agent):
+        scores_window = deque(maxlen=10)  # last scores
+        init_episode = self.load_checkpoint(self.save_checkpoint_path, agent)
+        episode_bar = trange(init_episode, self.max_episodes)
+        for i_episode in episode_bar:
             states = env.reset()
             agent.reset()
             score = 0
-            for step in range(self.max_t):
-                #actions = agent.act(states, eps) # TODO: remove eps from trainer?
-                actions = agent.act(states, True)
+            steps_bar = trange(self.max_t, leave=False)
+            for step in steps_bar:
+                actions, act_info = agent.act_train(states)
                 next_states, rewards, dones = env.step(actions)
-                agent.step(states, actions, rewards, next_states, dones)
+                agent.step(states, actions, rewards, next_states, dones, act_info)
                 states = next_states
                 score += np.mean(rewards)
-                if print_step:
-                    print(
-                        f"\rEpisode {i_episode} Step {step} Score: {score:.2f}", end=""
-                    )
+                steps_bar.set_description(f"Step {step + 1} Score: {score:.2f}")
                 done = np.any(dones)  # if any agent is done, then the episode is done
                 if done:
                     break
 
+            scores_window.append(score)  # save most recent score
+            avg_score = np.mean(scores_window)
+            episode_bar.set_description(
+                f"Episode {i_episode + 1} Score {score:.2f}  Avg_10 {avg_score:.2f}"
+            )
+
             if self.writer:
                 self.writer.add_scalar("score", score, i_episode)
-                self.writer.add_scalar("epsilon", eps, i_episode)
                 agent_losses = agent.get_losses()
                 for loss, loss_label in agent_losses:
                     self.writer.add_scalar(loss_label, loss, i_episode)
 
-            eps = max(self.eps_end, self.eps_decay * eps)  # decrease epsilon
-
             # Save the checkpoint
             if (i_episode + 1) % self.save_every == 0:
-                self.save_checkpoint(self.save_checkpoint_path, agent, i_episode)
+                self.save_checkpoint(self.save_checkpoint_path, agent, i_episode + 1)
 
             yield i_episode, score
 
@@ -122,24 +120,20 @@ class Trainer:
         }
         torch.save(checkpoint, path)
 
-    def _init_epsilon(self, i_episode):
-        return max(self.eps_end, self.eps_decay**i_episode)
-
     def load_checkpoint(self, path, agent):
         # Check if the file exists
         if not os.path.isfile(path) or self.override_checkpoint:
-            return 0, self.eps_start
+            return 0
 
         checkpoint = torch.load(path)
         agent.load_state(checkpoint["agent_state"])
 
-        eps = self._init_epsilon(checkpoint["i_episode"])
-        return checkpoint["i_episode"], eps
+        return checkpoint["i_episode"]
 
     def train_until(self, env, agent, desired_score, consecutive_episodes=100):
         scores_window = deque(maxlen=consecutive_episodes)  # last scores
         scores = []  # list containing scores from each episode
-        for i_episode, score in self._train(env, agent, print_step=False):
+        for i_episode, score in self._train(env, agent):
             scores.append(score)
 
             scores_window.append(score)  # save most recent score
@@ -151,31 +145,14 @@ class Trainer:
                 )
                 break
 
-            print(f"\rEpisode {i_episode} Average Score: {avg_score:.2f}", end="")
-            if i_episode % 10 == 0:
-                print(f"\rEpisode {i_episode} Average Score: {avg_score:.2f}")
-
         agent.save(self.save_model_path)
         env.close()
         return scores
 
     def train(self, env, agent):
-        scores_window = deque(maxlen=100)  # last 100 scores
         scores = []  # list containing scores from each episode
-        max_score = -np.Inf
-        for i_episode, score in self._train(env, agent, print_step=True):
+        for _, score in self._train(env, agent):
             scores.append(score)
-
-            scores_window.append(score)  # save most recent score
-            avg_score = np.mean(scores_window)
-            max_score = max(avg_score, max_score)
-
-            print(
-                f"\rEpisode {i_episode} Average Score: {avg_score:.2f} Max avg Score: {max_score:.2f}"
-            )
-
-            if i_episode % 10 == 0:
-                print(f"Memory size: {len(agent.memory)}")
 
         agent.save(self.save_model_path)
         env.close()
