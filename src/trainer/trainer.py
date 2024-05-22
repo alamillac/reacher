@@ -102,9 +102,9 @@ class Trainer:
 
             if self.writer:
                 self.writer.add_scalar("score", score, i_episode)
-                agent_losses = agent.get_losses()
-                for loss, loss_label in agent_losses:
-                    self.writer.add_scalar(loss_label, loss, i_episode)
+                agent_metrics = agent.pop_metrics()
+                for metric_label, metric, idx in agent_metrics:
+                    self.writer.add_scalar(metric_label, metric, idx)
 
             # Save the checkpoint
             if (i_episode + 1) % self.save_every == 0:
