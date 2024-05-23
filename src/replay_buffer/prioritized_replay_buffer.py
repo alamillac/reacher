@@ -12,7 +12,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class PrioritizedReplayBuffer:
     """Fixed-size buffer to store experience tuples."""
 
-    def __init__(self, action_size, buffer_size, batch_size, seed):
+    def __init__(self, action_size, buffer_size, batch_size, alpha=PER_ALPHA):
         """Initialize a ReplayBuffer object.
 
         Params
@@ -20,7 +20,7 @@ class PrioritizedReplayBuffer:
             action_size (int): dimension of each action
             buffer_size (int): maximum size of buffer
             batch_size (int): size of each training batch
-            seed (int): random seed
+            alpha (float): alpha parameter for prioritized replay buffer
         """
         self.buffer_size = buffer_size
         self.action_size = action_size
@@ -36,8 +36,7 @@ class PrioritizedReplayBuffer:
         self.max_priority = 1.0
         self.next_idx = 0
         self.current_size = 0
-
-        random.seed(seed)
+        self.alpha = alpha
 
     def add(self, state, action, reward, next_state, done):
         """Add a new experience to memory."""
@@ -58,7 +57,7 @@ class PrioritizedReplayBuffer:
     def sample(self):
         """Randomly sample a batch of experiences from memory."""
         priorities = (
-            self.priorities[: self.current_size] ** PER_ALPHA
+            self.priorities[: self.current_size] ** self.alpha
         )  # To make the sampling more uniform and reduce overfitting
         sampling_weights = priorities / np.sum(priorities)
         idx_experiences = np.random.choice(
