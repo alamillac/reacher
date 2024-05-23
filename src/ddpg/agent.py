@@ -7,9 +7,10 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
-from .model import Actor, Critic
-from replay_buffer import PrioritizedReplayBuffer
 from noise import OUNoise
+from replay_buffer import PrioritizedReplayBuffer
+
+from .model import Actor, Critic
 
 BUFFER_SIZE = int(1e5)  # replay buffer size
 BATCH_SIZE = 128  # minibatch size
@@ -27,6 +28,9 @@ ACTOR_HIDDEN_LAYER_2 = 128
 CRITIC_HIDDEN_LAYER_1 = 256
 CRITIC_HIDDEN_LAYER_2 = 128
 
+# Gradient clipping
+VALUE_MAX_GRAD_NORM = 1.0
+
 # Prioritized Experience Replay (PER)
 PER_ALPHA = 0.6
 PER_BETA_START = 0.4
@@ -39,7 +43,9 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class DDPGAgent:
     """Interacts with and learns from the environment."""
 
-    def __init__(self, state_size, action_size, seed=0, batch_size=BATCH_SIZE, add_noise=True):
+    def __init__(
+        self, state_size, action_size, seed=0, batch_size=BATCH_SIZE, add_noise=True
+    ):
         """Initialize an Agent object.
 
         Params
@@ -92,8 +98,13 @@ class DDPGAgent:
         # Noise process
         self.noise = OUNoise(action_size, seed)
 
+        # Gradient clipping
+        self.value_max_grad_norm = VALUE_MAX_GRAD_NORM
+
         # Replay memory
-        self.memory = PrioritizedReplayBuffer(action_size, BUFFER_SIZE, batch_size, seed)
+        self.memory = PrioritizedReplayBuffer(
+            action_size, BUFFER_SIZE, batch_size, PER_ALPHA
+        )
         self.beta = PER_BETA_START
 
         # Initialize time step (for updating every UPDATE_EVERY steps)
@@ -190,7 +201,7 @@ class DDPGAgent:
         self.critic_optimizer.zero_grad()
         critic_weighted_loss.backward()
         torch.nn.utils.clip_grad_norm_(
-            self.critic_local.parameters(), 1
+            self.critic_local.parameters(), self.value_max_grad_norm
         )  # Gradient clipping
         self.critic_optimizer.step()
 
@@ -256,4 +267,3 @@ class DDPGAgent:
         self.critic_target.load_state_dict(state["critic_target_state_dict"])
         self.critic_optimizer.load_state_dict(state["critic_optimizer_state_dict"])
         self.beta = state["beta"]
-
