@@ -18,6 +18,7 @@ class Trainer:
         save_checkpoint_path="checkpoint.pth",
         save_model_path="model.pth",
         override_checkpoint=False,
+        disable_bar_progress=False,
         writer=None,
     ):
         """Deep Q-Learning.
@@ -34,6 +35,7 @@ class Trainer:
         self.save_every = save_every
         self.override_checkpoint = override_checkpoint
         self.writer = writer
+        self.disable_bar_progress = disable_bar_progress
 
     def plot_scores(self, scores):
         # plot the scores
@@ -49,16 +51,20 @@ class Trainer:
         max_score = -np.Inf
         min_score = np.Inf
         total_score = 0
-        episode_bar = trange(num_episodes)
+        episode_bar = trange(num_episodes, disable=self.disable_bar_progress)
         for i_episode in episode_bar:
             states = env.reset()
             score = 0
-            steps_bar = trange(self.max_t, leave=False)
+            steps_bar = trange(
+                self.max_t, leave=False, disable=self.disable_bar_progress
+            )
             for step in steps_bar:
                 actions = agent.act(states)
                 states, rewards, dones = env.step(actions)
                 score += np.mean(rewards)
                 steps_bar.set_description(f"Step {step + 1} Score: {score:.2f}")
+                if self.disable_bar_progress:
+                    print(f"\rStep {step + 1} Score: {score:.2f}", end="")
                 done = np.any(dones)  # if any agent is done, then the episode is done
                 if done:
                     break
@@ -71,6 +77,10 @@ class Trainer:
             episode_bar.set_description(
                 f"Episode {i_episode + 1} Scores: Last {score:.2f} Min {min_score:.2f} Max {max_score:.2f} Avg {avg_score:.2f}"
             )
+            if self.disable_bar_progress:
+                print(
+                    f"\rEpisode {i_episode + 1} Scores: Last {score:.2f} Min {min_score:.2f} Max {max_score:.2f} Avg {avg_score:.2f}"
+                )
         env.close()
         return scores
 
@@ -78,12 +88,16 @@ class Trainer:
         scores_window_5 = deque(maxlen=5)  # last scores
         scores_window_100 = deque(maxlen=100)  # last scores
         init_episode = self.load_checkpoint(self.save_checkpoint_path, agent)
-        episode_bar = trange(init_episode, self.max_episodes)
+        episode_bar = trange(
+            init_episode, self.max_episodes, disable=self.disable_bar_progress
+        )
         for i_episode in episode_bar:
             states = env.reset()
             agent.reset()
             score = 0
-            steps_bar = trange(self.max_t, leave=False)
+            steps_bar = trange(
+                self.max_t, leave=False, disable=self.disable_bar_progress
+            )
             for step in steps_bar:
                 actions = agent.act_train(states)
                 next_states, rewards, dones = env.step(actions)
@@ -102,6 +116,11 @@ class Trainer:
             episode_bar.set_description(
                 f"Episode {i_episode + 1} Score [{score:.2f} {avg_score_5:.2f} {avg_score_100:.2f}]"
             )
+            if self.disable_bar_progress:
+                score_str = f"\rEpisode {i_episode + 1} Score [{score:.2f} {avg_score_5:.2f} {avg_score_100:.2f}]"
+                print(score_str, end="")
+                if i_episode % 10 == 0:
+                    print(score_str)
 
             if self.writer:
                 self.writer.add_scalar("score", score, i_episode)
