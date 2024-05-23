@@ -48,7 +48,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class TD3Agent():
     """twin-delayed DDPG (TD3)"""
 
-    def __init__(self, state_size, action_bounds, batch_size=BATCH_SIZE, add_noise=True, n_envs=1, PER=True):
+    def __init__(self, state_size, action_bounds, batch_size=BATCH_SIZE, add_noise=True, n_envs=1, PER=True, noise_decay_steps=DECAY_STEPS):
         """Initialize an Agent object.
 
         Params
@@ -96,7 +96,7 @@ class TD3Agent():
 
         # Noise process
         self.add_noise = add_noise
-        self.noise = NormalNoise(action_bounds, decay_steps=DECAY_STEPS)
+        self.noise = NormalNoise(action_bounds, decay_steps=noise_decay_steps)
 
         # Noise ratio
         self.policy_noise_ratio = POLICY_NOISE_RATIO
@@ -126,7 +126,7 @@ class TD3Agent():
         self.num_steps = 0
 
 
-    def step(self, states, actions, rewards, next_states, dones, act_info=None):
+    def step(self, states, actions, rewards, next_states, dones):
         """Save experience in replay memory, and use random sample from buffer to learn."""
         # Save noise metrics
         self.num_steps += 1
@@ -182,7 +182,7 @@ class TD3Agent():
         self.actor_local.train()
         if self.add_noise:
             actions += self.noise.sample(self.n_envs)
-        return np.clip(actions, self.env_min, self.env_max), None
+        return np.clip(actions, self.env_min, self.env_max)
 
     def act(self, states):
         """Returns actions for given state as per current policy."""
@@ -193,7 +193,8 @@ class TD3Agent():
             actions = self.actor_local(states).cpu().data.numpy()
         self.actor_local.train()
         if self.add_noise:
-            noise = self.noise.sample().reshape(actions.shape)
+            noise = self.noise.sample(self.n_envs)
+            #noise = self.noise.sample().reshape(actions.shape)
             actions += noise
         return np.clip(actions, self.env_min, self.env_max)
 

@@ -75,7 +75,8 @@ class Trainer:
         return scores
 
     def _train(self, env, agent):
-        scores_window = deque(maxlen=10)  # last scores
+        scores_window_5 = deque(maxlen=5)  # last scores
+        scores_window_100 = deque(maxlen=100)  # last scores
         init_episode = self.load_checkpoint(self.save_checkpoint_path, agent)
         episode_bar = trange(init_episode, self.max_episodes)
         for i_episode in episode_bar:
@@ -84,9 +85,9 @@ class Trainer:
             score = 0
             steps_bar = trange(self.max_t, leave=False)
             for step in steps_bar:
-                actions, act_info = agent.act_train(states)
+                actions = agent.act_train(states)
                 next_states, rewards, dones = env.step(actions)
-                agent.step(states, actions, rewards, next_states, dones, act_info)
+                agent.step(states, actions, rewards, next_states, dones)
                 states = next_states
                 score += np.mean(rewards)
                 steps_bar.set_description(f"Step {step + 1} Score: {score:.2f}")
@@ -94,10 +95,12 @@ class Trainer:
                 if done:
                     break
 
-            scores_window.append(score)  # save most recent score
-            avg_score = np.mean(scores_window)
+            scores_window_5.append(score)  # save most recent score
+            scores_window_100.append(score)  # save most recent score
+            avg_score_5 = np.mean(scores_window_5)
+            avg_score_100 = np.mean(scores_window_100)
             episode_bar.set_description(
-                f"Episode {i_episode + 1} Score {score:.2f}  Avg_10 {avg_score:.2f}"
+                f"Episode {i_episode + 1} Score [{score:.2f} {avg_score_5:.2f} {avg_score_100:.2f}]"
             )
 
             if self.writer:

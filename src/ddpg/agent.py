@@ -103,7 +103,7 @@ class DDPGAgent:
         self.metrics = []
         self.num_steps = 0
 
-    def step(self, states, actions, rewards, next_states, dones, act_info=None):
+    def step(self, states, actions, rewards, next_states, dones):
         """Save experience in replay memory, and use random sample from buffer to learn."""
         # Save experience / reward
         for state, action, reward, next_state, done in zip(
@@ -131,11 +131,11 @@ class DDPGAgent:
         self.actor_local.train()
         if self.add_noise:
             actions += self.noise.sample()
-        return np.clip(actions, -1, 1), None
+        return np.clip(actions, -1, 1)
 
     def act(self, states):
         """Returns actions for given state as per current policy."""
-        actions, _ = self.act_train(states)
+        actions = self.act_train(states)
         return actions
 
     def reset(self):
