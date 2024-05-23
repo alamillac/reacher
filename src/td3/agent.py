@@ -193,7 +193,7 @@ class TD3Agent():
             actions = self.actor_local(states).cpu().data.numpy()
         self.actor_local.train()
         if self.add_noise:
-            noise = self.noise.sample(self.n_envs)
+            noise = self.noise.sample(self.n_envs, noise_ratio=0.05)
             #noise = self.noise.sample().reshape(actions.shape)
             actions += noise
         return np.clip(actions, self.env_min, self.env_max)

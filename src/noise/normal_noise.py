@@ -20,9 +20,10 @@ class NormalNoise:
         """Update the noise ratio."""
         self.noise_ratio = max(self.min_noise_ratio, self.noise_ratio + self.increment)
 
-    def sample(self, num_samples=1):
+    def sample(self, num_samples=1, noise_ratio=None):
         """Return a noise sample."""
-        scale = (self.high - self.low) * self.noise_ratio
+        noise_ratio = noise_ratio or self.noise_ratio
+        scale = (self.high - self.low) * noise_ratio
         scale = scale[:, np.newaxis]
         sample = np.random.normal(loc=0, scale=scale, size=(self.size, num_samples)).T
         self.ratio_noise_injected = np.mean(np.abs(sample / (self.high - self.low)))
