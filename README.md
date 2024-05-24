@@ -70,7 +70,7 @@ Unzip the file and place it in the root directory of the repository
 
 ### Testing the Agent
 
-There are already pre-trained weights in the `checkpoint.pth` and `checkpoint_visual.pth` file for 2000 episodes.
+There are already pre-trained weights in the `reacher.pth` and `reacher_td3.pth` files.
 
 To test the agent, run the `test.py` script.
 

@@ -4,7 +4,6 @@ from os import path
 import numpy as np
 from torch.utils.tensorboard.writer import SummaryWriter
 
-from ddpg import DDPGAgent
 from environment import Env
 from td3 import TD3Agent
 from trainer import Trainer
@@ -12,14 +11,14 @@ from trainer import Trainer
 env_path = {
     "reacher_one": (
         "Reacher_One_Linux/Reacher.x86_64",
-        "reacher.pth",
+        "reacher_td3.pth",
         "reacher_one_checkpoint.pth",
         1000,
         64,
     ),
     "reacher_many": (
         "Reacher_Linux/Reacher.x86_64",
-        "reacher.pth",
+        "reacher_td3.pth",
         "reacher_many_checkpoint.pth",
         1000,
         128,
@@ -64,12 +63,6 @@ trainer = Trainer(
     writer=writer,
 )
 
-# agent = DDPGAgent(
-#     state_size=env.state_size,
-#     action_size=env.action_size,
-#     seed=0,
-#     batch_size=batch_size,
-# )
 agent = TD3Agent(
     state_size=env.state_size,
     action_bounds=action_bounds,
