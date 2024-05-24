@@ -33,12 +33,17 @@ env_path = {
     ),
 }
 
-env_name = "reacher_one"
-# env_name = "reacher_many"
+# env_name = "reacher_one"
+env_name = "reacher_many"
 # env_name = "crawler"
-env_filename, save_path, save_checkpoint_path, max_episodes, batch_size = env_path[env_name]
+env_filename, save_path, save_checkpoint_path, max_episodes, batch_size = env_path[
+    env_name
+]
 
 env = Env(env_filename, train_mode=True)
+low = np.array([-1] * env.action_size)
+high = np.array([1] * env.action_size)
+action_bounds = (low, high)
 
 print("Number of agents:", env.num_agents)
 print("Number of actions:", env.action_size)
@@ -51,13 +56,12 @@ log_dir = path.join(
 writer = SummaryWriter(log_dir)
 
 trainer = Trainer(
-    max_episodes=6500,
+    max_episodes=max_episodes,
     max_t=1000,
     save_model_path=save_path,
     save_checkpoint_path=save_checkpoint_path,
     override_checkpoint=False,
     writer=writer,
-    disable_bar_progress=True,
 )
 
 # agent = DDPGAgent(
@@ -66,17 +70,13 @@ trainer = Trainer(
 #     seed=0,
 #     batch_size=batch_size,
 # )
-low = np.array([-1] * env.action_size)
-high = np.array([1] * env.action_size)
-action_bounds = (low, high)
 agent = TD3Agent(
     state_size=env.state_size,
     action_bounds=action_bounds,
     batch_size=batch_size,
     n_envs=env.num_agents,
-    noise_decay_steps=1000,
+    noise_decay_steps=max_episodes,
 )
 
-# scores = trainer.train_until(env, agent, desired_score=30, consecutive_episodes=100)
-scores = trainer.train(env, agent)
+scores = trainer.train_until(env, agent, desired_score=30, consecutive_episodes=100)
 trainer.plot_scores(scores)
