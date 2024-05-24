@@ -11,8 +11,8 @@ env_path = {
 }
 
 
-env_name = "reacher_one"
-# env_name = "reacher_many"
+# env_name = "reacher_one"
+env_name = "reacher_many"
 # env_name = "crawler"
 
 env_filename, save_path = env_path[env_name]
