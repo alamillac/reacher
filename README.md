@@ -1,6 +1,7 @@
 [//]: # (Image References)
 
 [image1]: reacher.gif "Trained Agent"
+[image2]: crawler.png "Trained Agent"
 
 # Project 2: Reacher
 
@@ -58,6 +59,8 @@ pip install .
 ### (Optional) Crawl
 
 The goal is to teach a creature with four legs to walk forward without falling.
+
+![Trained Agent][image2]
 
 You can read more about this environment in the ML-Agents GitHub [here](https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Learning-Environment-Examples.md#crawler).
 
