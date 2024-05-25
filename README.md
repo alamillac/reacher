@@ -1,6 +1,6 @@
 [//]: # (Image References)
 
-[image1]: https://video.udacity-data.com/topher/2018/June/5b1ea778_reacher/reacher.gif "Trained Agent"
+[image1]: reacher.gif "Trained Agent"
 
 # Project 2: Reacher
 
